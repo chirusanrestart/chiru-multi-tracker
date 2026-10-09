@@ -426,17 +426,47 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    const trackers = [...summary.values()].map(item => ({
-      ...item,
-      availability: item.checks
+    const trackers = [...summary.values()].map(item => {
+      const availability = item.checks
         ? Number((item.online / item.checks * 100).toFixed(2))
-        : 0,
-      averageLatency: item.latencySamples
+        : 0;
+      const averageLatency = item.latencySamples
         ? Math.round(item.latencyTotal / item.latencySamples)
-        : null
-    })).sort((a, b) => b.availability - a.availability);
+        : null;
+      let recommendation = 'insufficient-data';
+      if (item.checks >= 12) {
+        if (availability >= 80) recommendation = 'keep';
+        else if (availability >= 35) recommendation = 'watch';
+        else recommendation = 'retirement-candidate';
+      }
+      return {
+        url: item.url,
+        checks: item.checks,
+        online: item.online,
+        offline: item.offline,
+        availability,
+        averageLatency,
+        recommendation,
+        recommendationNote: {
+          keep: 'Boa disponibilidade histórica; manter na lista.',
+          watch: 'Disponibilidade irregular; observar mais ciclos.',
+          'retirement-candidate': 'Muitas falhas no histórico; avaliar remoção após confirmar em outra rede.',
+          'insufficient-data': 'Ainda não há 12 verificações para recomendar mudanças.'
+        }[recommendation]
+      };
+    }).sort((a, b) => {
+      const priority = { keep: 0, watch: 1, 'insufficient-data': 2, 'retirement-candidate': 3 };
+      return priority[a.recommendation] - priority[b.recommendation]
+        || b.availability - a.availability
+        || (a.averageLatency ?? Number.MAX_SAFE_INTEGER) - (b.averageLatency ?? Number.MAX_SAFE_INTEGER);
+    });
 
-    return sendJSON(res, 200, { count: trackers.length, trackers });
+    return sendJSON(res, 200, {
+      count: trackers.length,
+      policy: 'Recomendação baseada no histórico; nenhuma URL é removida automaticamente.',
+      thresholds: { minimumChecks: 12, keepAvailabilityPercent: 80, watchAvailabilityPercent: 35 },
+      trackers
+    });
   }
 
   return sendJSON(res, 404, { error: 'Rota não encontrada' });
