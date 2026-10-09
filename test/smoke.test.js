@@ -65,7 +65,7 @@ test('dashboard and test helpers are present', async () => {
 test('HTTP tracker implements announce and scrape endpoints', async () => {
   const tracker = await readFile(new URL('../src/tracker.js', import.meta.url), 'utf8');
   assert.ok(tracker.includes("pathname !== '/announce' && pathname !== '/scrape'"));
-  assert.ok(tracker.includes("'peers6'"));
+  assert.ok(tracker.includes('peers6:'));
   assert.ok(tracker.includes("'failure reason'"));
   assert.ok(tracker.includes("files.set(hash"));
 });
