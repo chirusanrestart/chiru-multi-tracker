@@ -21,12 +21,13 @@ function normalizeTracker(value) {
   try {
     const url = new URL(value.trim());
     if (url.protocol !== 'udp:' || !url.hostname || url.username || url.password) return null;
-    if (url.hostname.includes('/') || /\\s/.test(url.hostname)) return null;
-    url.pathname = url.pathname.replace(/\\/{2,}/g, '/');
-    if (!url.pathname || url.pathname === '/') url.pathname = '/announce';
+    // Collapse repeated path separators without regex-escaping hazards in generated edits.
+    const segments = url.pathname.split('/').filter(Boolean);
+    url.pathname = '/' + segments.join('/');
+    if (url.pathname === '/') url.pathname = '/announce';
     url.hash = '';
     url.search = '';
-    return url.toString().replace(/\\/$/, '');
+    return url.toString();
   } catch {
     return null;
   }
