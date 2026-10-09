@@ -41,11 +41,11 @@ Use um domínio Dynu com registro AAAA apontando para o IPv6 atual (e registro A
 
 ## Descoberta de novos trackers
 
-Execute `npm run discover` para consultar listas públicas de trackers mantidas por projetos externos, comparar os endereços com `data/trackers.json` e salvar candidatos novos em `data/discovered-trackers.json`.
+Ao iniciar `npm start`, o servidor executa a descoberta automaticamente e repete o processo a cada seis horas. Ele consulta listas públicas, compara os endereços com `data/trackers.json` e atualiza `data/discovered-trackers.json` com os candidatos novos. Para executar manualmente, use `npm run discover`.
 
 O script consulta as listas `trackers_best`, `trackers_all_udp`, `trackers_all_http` e `trackers_all_https` do [ngosang/trackerslist](https://github.com/ngosang/trackerslist), além da lista comunitária [DeSireFire/animeTrackerList](https://github.com/DeSireFire/animeTrackerList). Se uma fonte falhar, as demais ainda são processadas.
 
-**Segurança da lista:** descoberta não significa validação. Os candidatos são salvos separadamente e não são ativados automaticamente, pois uma URL encontrada em uma lista pode estar offline ou não aceitar announces válidos. Revise os resultados e use o monitor para testar os endpoints antes de copiá-los para `data/trackers.json`. O arquivo gerado fica local e não é versionado automaticamente pelo script.
+**Segurança da lista:** descoberta não significa validação. Os candidatos são salvos separadamente e não são ativados automaticamente, pois uma URL encontrada em uma lista pode estar offline ou não aceitar announces válidos. Revise os resultados e use o monitor para testar os endpoints antes de copiá-los para `data/trackers.json`. O arquivo gerado fica local e não é versionado automaticamente pelo script. A frequência padrão é de seis horas; altere com `TRACKER_DISCOVERY_INTERVAL_MS` (milissegundos) ou desative com `DISABLE_TRACKER_DISCOVERY=1`.
 
 ## API
 
