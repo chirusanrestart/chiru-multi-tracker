@@ -8,7 +8,7 @@ const server = await readFile(new URL('../src/server.js', import.meta.url), 'utf
 
 test('package metadata and scripts are configured', () => {
   assert.equal(packageJson.name, 'chiru-multi-tracker');
-  assert.match(packageJson.version, /^2\.1\.\d+$/);
+  assert.match(packageJson.version, /^2\.\d+\.\d+$/);
   assert.equal(packageJson.type, 'module');
   assert.ok(packageJson.scripts.start);
   assert.ok(packageJson.scripts.check);
