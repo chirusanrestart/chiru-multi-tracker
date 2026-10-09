@@ -48,3 +48,8 @@ No dashboard, cole um infohash para gerar o magnet. Marque “Usar somente track
 - **Online não significa rápido:** latência é o tempo observado nessa verificação e pode variar com a rede, DNS e localização.
 
 A lista em `data/trackers.json` é editável. Organize os URLs nas categorias existentes ou crie categorias novas. Use somente endpoints públicos e respeite as regras dos serviços e a legislação aplicável.
+
+
+## Fontes da lista de trackers
+
+A lista inicial inclui endpoints públicos UDP, HTTP e HTTPS da coleção mantida por [ngosang/trackerslist](https://github.com/ngosang/trackerslist), usando as listas `trackers_best.txt`, `trackers_all_udp.txt`, `trackers_all_http.txt` e `trackers_all_https.txt`. A lista foi deduplicada contra os endereços que já existiam no projeto. Os endpoints podem sair do ar a qualquer momento; consulte o resultado do monitor antes de usá-los. O projeto não inclui trackers WebSocket, I2P ou Yggdrasil, pois exigem suporte/rede específica que o verificador atual não implementa.
