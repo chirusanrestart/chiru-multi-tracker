@@ -1,5 +1,6 @@
 
 import http from 'node:http';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import dns from 'node:dns/promises';
@@ -441,6 +442,30 @@ const server = http.createServer(async (req, res) => {
   return sendJSON(res, 404, { error: 'Rota não encontrada' });
 });
 
+let ddnsUpdater = null;
+
+function startDdnsUpdater() {
+  if (process.env.DISABLE_DDNS_UPDATER === '1') {
+    console.log('ℹ️ Atualizador Dynu automático desativado por DISABLE_DDNS_UPDATER=1.');
+    return;
+  }
+
+  const updaterPath = path.join(__dirname, 'ddns-updater.js');
+  ddnsUpdater = spawn(process.execPath, [updaterPath], {
+    stdio: 'inherit',
+    env: process.env
+  });
+
+  ddnsUpdater.on('error', error => {
+    console.error(`❌ Não foi possível iniciar o atualizador Dynu: ${error.message}`);
+  });
+  ddnsUpdater.on('exit', (code, signal) => {
+    if (code !== 0) {
+      console.error(`⚠️ Atualizador Dynu terminou (código=${code}, sinal=${signal || 'nenhum'}). O tracker continuará rodando.`);
+    }
+  });
+}
+
 server.on('error', error => {
   console.error(`❌ Falha ao abrir o servidor HTTP na porta ${PORT} (bind ${BIND_HOST}): ${error.code || error.message}`);
   if (error.code === 'EADDRINUSE') console.error('➡️ A porta já está em uso por outro processo.');
@@ -451,6 +476,7 @@ server.on('error', error => {
 // Ask Node to keep IPv4-mapped connections enabled when listening on IPv6.
 server.listen({ port: PORT, host: BIND_HOST, ipv6Only: false }, async () => {
   const address = server.address();
+  startDdnsUpdater();
   console.log(`📡 Chiru MultiTracker v${APP_VERSION} iniciado; bind=${BIND_HOST}; porta=${PORT}; endereço=${JSON.stringify(address)}`);
   console.log(`🩺 Teste local: http://127.0.0.1:${PORT}/healthz`);
   console.log(`🩺 Teste pela rede: http://IP-DO-CELULAR:${PORT}/healthz`);
