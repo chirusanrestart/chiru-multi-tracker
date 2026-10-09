@@ -97,12 +97,12 @@ nano .env
 
 Defina `DDNS_HOST`, `DDNS_USERNAME` e `DDNS_PASSWORD`. O arquivo de modelo no GitHub deve conter apenas campos vazios/de exemplo; nunca publique a senha real. O atualizador lê essas variáveis do ambiente ou do arquivo local `.env`.
 
-Execute o atualizador em outro processo:
+O `npm start` inicia o atualizador Dynu automaticamente junto com o servidor. Se quiser executar somente o atualizador, sem iniciar o servidor, use:
 
 ```sh
 npm run ddns
 ```
 
-O primeiro ciclo ocorre ao iniciar; depois, verifica a cada `DDNS_UPDATE_INTERVAL_MS` milissegundos (padrão: 300000). O último IPv6 confirmado fica em `data/ddns-last-ip.json`, ignorado pelo Git. As credenciais são enviadas somente ao endpoint HTTPS do Dynu e não são impressas nos logs.
+O primeiro ciclo ocorre ao iniciar; depois, verifica a cada `DDNS_UPDATE_INTERVAL_MS` milissegundos (padrão: 300000). Para desativar o processo automático junto ao servidor, defina `DISABLE_DDNS_UPDATER=1`. O último IPv6 confirmado fica em `data/ddns-last-ip.json`, ignorado pelo Git. As credenciais são enviadas somente ao endpoint HTTPS do Dynu e não são impressas nos logs.
 
 **Importante:** a API de descoberta identifica o IPv6 público usado para conexões de saída. Isso não abre portas de entrada nem garante que o endereço seja estável/acessível no Android. O registro AAAA e as regras de entrada da rede precisam permitir conexões ao servidor.
