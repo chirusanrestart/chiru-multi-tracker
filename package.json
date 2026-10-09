@@ -1,7 +1,7 @@
 {
   "name": "chiru-multi-tracker",
-  "version": "2.1.2",
-  "description": "Agregador e monitor de disponibilidade de trackers BitTorrent com dashboard e API HTTP.",
+  "version": "2.2.0",
+  "description": "Agregador de trackers BitTorrent, monitor e tracker HTTP compatível com clientes comuns, com suporte a IPv6.",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
@@ -9,7 +9,15 @@
     "check": "node --check src/server.js",
     "test": "npm run check && node --test"
   },
-  "keywords": ["bittorrent", "tracker", "monitor", "api", "magnet"],
+  "keywords": [
+    "bittorrent",
+    "tracker",
+    "monitor",
+    "api",
+    "magnet"
+  ],
   "license": "ISC",
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }
