@@ -16,6 +16,22 @@ const MAX_PROMOTE = Math.max(0, Math.min(20, Number(process.env.TRACKER_MAX_PROM
 const TIMEOUT_MS = 4000;
 const REQUIRED_SUCCESSES = 2;
 
+function normalizeTracker(value) {
+  if (typeof value !== 'string') return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== 'udp:' || !url.hostname || url.username || url.password) return null;
+    if (url.hostname.includes('/') || /\\s/.test(url.hostname)) return null;
+    url.pathname = url.pathname.replace(/\\/{2,}/g, '/');
+    if (!url.pathname || url.pathname === '/') url.pathname = '/announce';
+    url.hash = '';
+    url.search = '';
+    return url.toString().replace(/\\/$/, '');
+  } catch {
+    return null;
+  }
+}
+
 async function readJSON(file, fallback) {
   try { return JSON.parse(await fs.readFile(file, 'utf8')); }
   catch { return fallback; }
@@ -74,10 +90,20 @@ async function main() {
   }
   const activeData = await readJSON(ACTIVE_FILE, {});
   const historyData = await readJSON(HISTORY_FILE, { version: 1, cursor: 0, trackers: {} });
-  const active = new Set(Object.values(activeData).flatMap(v => Array.isArray(v) ? v : []));
+  const active = new Set(
+    Object.values(activeData)
+      .flatMap(v => Array.isArray(v) ? v : [])
+      .map(normalizeTracker)
+      .filter(Boolean)
+  );
   const candidates = discovered.candidates
-    .map(item => typeof item === 'string' ? { url: item } : item)
-    .filter(item => typeof item.url === 'string' && item.url.startsWith('udp://') && !active.has(item.url));
+    .map(item => {
+      const rawUrl = typeof item === 'string' ? item : item?.url;
+      const url = normalizeTracker(rawUrl);
+      return url ? { ...(typeof item === 'object' && item ? item : {}), url } : null;
+    })
+    .filter(item => item && !active.has(item.url))
+    .filter((item, index, list) => list.findIndex(other => other.url === item.url) === index);
   if (!candidates.length) {
     console.log('Nenhum candidato UDP novo para avaliar.');
     return;
@@ -99,6 +125,7 @@ async function main() {
   }
   const batch = [...retry.slice(0, BATCH_SIZE), ...freshBatch.slice(0, Math.max(0, BATCH_SIZE - Math.min(retry.length, BATCH_SIZE)))];
   let passed = 0;
+  console.log(`⚙️ Avaliador configurado: lote=${BATCH_SIZE}, concorrência=${CONCURRENCY}, timeout=${TIMEOUT_MS}ms, promoção máxima=${MAX_PROMOTE}.`);
 
   // Testa em pequenos grupos paralelos: mais cobertura sem esperar 4 s por candidato em série.
   let nextIndex = 0;
