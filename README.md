@@ -60,10 +60,15 @@ O script consulta as listas `trackers_best`, `trackers_all_udp`, `trackers_all_h
 - `GET /api/list` - URLs dos trackers marcados como online, ordenadas por latência; filtro opcional: `protocol`
 - `GET /api/history?limit=24` - snapshots recentes (limite máximo de 288)
 - `GET /api/history/summary` - disponibilidade histórica e latência média por tracker
+- `GET /api/ranking` - alias para o resumo ranqueado dos trackers, com recomendação `keep`, `watch` ou `retirement-candidate`
 
 Exemplos: `/api/trackers?protocol=udp&status=online` e `/api/magnet?hash=0123456789abcdef0123456789abcdef01234567&dn=Teste`.
 
 No dashboard, cole um infohash para gerar o magnet. Marque “Usar somente trackers que responderam ao teste” se quiser filtrar a lista; por padrão, o gerador inclui todos os trackers configurados, mesmo que o teste ainda não tenha sido concluído.
+
+## Ranking e manutenção da lista
+
+O endpoint `/api/history/summary` (também disponível em `/api/ranking`) ordena os trackers pela recomendação baseada no histórico: `keep` para disponibilidade de pelo menos 80%, `watch` entre 35% e 80%, e `retirement-candidate` abaixo de 35%, somente depois de pelo menos 12 verificações. O ranking usa a disponibilidade histórica e a latência média como critério de ordenação. Ele **não remove automaticamente** nenhum tracker: uma queda de rede ou bloqueio temporário pode causar falsos negativos, então confirme os candidatos a remoção antes de editar `data/trackers.json`.
 
 ## Como interpretar os resultados
 
