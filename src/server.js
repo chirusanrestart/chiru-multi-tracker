@@ -443,6 +443,51 @@ const server = http.createServer(async (req, res) => {
 });
 
 let ddnsUpdater = null;
+let discoveryProcess = null;
+let discoveryTimer = null;
+const DISCOVERY_INTERVAL = Math.max(
+  60_000,
+  Number(process.env.TRACKER_DISCOVERY_INTERVAL_MS || 6 * 60 * 60 * 1000)
+);
+
+function runTrackerDiscovery() {
+  if (process.env.DISABLE_TRACKER_DISCOVERY === '1') {
+    console.log('ℹ️ Descoberta automática de trackers desativada por DISABLE_TRACKER_DISCOVERY=1.');
+    return;
+  }
+  if (discoveryProcess) {
+    console.log('ℹ️ Descoberta de trackers já está em andamento; ciclo duplicado ignorado.');
+    return;
+  }
+
+  const scriptPath = path.resolve(__dirname, '../scripts/discover-trackers.js');
+  console.log('🔎 Iniciando descoberta automática de novos trackers públicos...');
+  discoveryProcess = spawn(process.execPath, [scriptPath], {
+    stdio: 'inherit',
+    env: process.env
+  });
+
+  discoveryProcess.on('error', error => {
+    console.error(`❌ Não foi possível iniciar a descoberta de trackers: ${error.message}`);
+    discoveryProcess = null;
+  });
+  discoveryProcess.on('exit', (code, signal) => {
+    if (code === 0) console.log('✅ Descoberta automática concluída; candidatos atualizados em data/discovered-trackers.json.');
+    else console.error(`⚠️ Descoberta de trackers terminou (código=${code}, sinal=${signal || 'nenhum'}).`);
+    discoveryProcess = null;
+  });
+}
+
+function startTrackerDiscoveryScheduler() {
+  if (process.env.DISABLE_TRACKER_DISCOVERY === '1') {
+    console.log('ℹ️ Descoberta automática desativada por DISABLE_TRACKER_DISCOVERY=1.');
+    return;
+  }
+
+  runTrackerDiscovery();
+  discoveryTimer = setInterval(runTrackerDiscovery, DISCOVERY_INTERVAL);
+  console.log(`⏱️ Descoberta automática de trackers: a cada ${Math.round(DISCOVERY_INTERVAL / 60000)} minuto(s).`);
+}
 
 function startDdnsUpdater() {
   if (process.env.DISABLE_DDNS_UPDATER === '1') {
@@ -477,6 +522,7 @@ server.on('error', error => {
 server.listen({ port: PORT, host: BIND_HOST, ipv6Only: false }, async () => {
   const address = server.address();
   startDdnsUpdater();
+  startTrackerDiscoveryScheduler();
   console.log(`📡 Chiru MultiTracker v${APP_VERSION} iniciado; bind=${BIND_HOST}; porta=${PORT}; endereço=${JSON.stringify(address)}`);
   console.log(`🩺 Teste local: http://127.0.0.1:${PORT}/healthz`);
   console.log(`🩺 Teste pela rede: http://IP-DO-CELULAR:${PORT}/healthz`);
