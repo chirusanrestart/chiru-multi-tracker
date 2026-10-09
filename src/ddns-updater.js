@@ -151,7 +151,7 @@ async function runOnce() {
   const action = response.split(/\s+/)[0].toLowerCase() === 'nochg'
     ? 'registro já estava sincronizado'
     : 'registro atualizado';
-  console.log(\`✅ Dynu verificado: IPv6 \${ip}; \${action}; \${changed ? 'IP mudou' : 'IP igual ao ciclo anterior'}; próxima verificação em \${Math.round(intervalMs() / 60000)} min.\`);
+  console.log(`✅ Dynu verificado: IPv6 ${ip}; ${action}; ${changed ? 'IP mudou' : 'IP igual ao ciclo anterior'}; próxima verificação em ${Math.round(intervalMs() / 60000)} min.`);
 }
 async function main() {
   await loadEnvFile();
