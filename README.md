@@ -71,25 +71,25 @@ A lista em `data/trackers.json` é editável. Organize os URLs nas categorias ex
 A lista inicial inclui endpoints públicos UDP, HTTP e HTTPS da coleção mantida por [ngosang/trackerslist](https://github.com/ngosang/trackerslist), usando as listas `trackers_best.txt`, `trackers_all_udp.txt`, `trackers_all_http.txt` e `trackers_all_https.txt`. A lista foi deduplicada contra os endereços que já existiam no projeto. Os endpoints podem sair do ar a qualquer momento; consulte o resultado do monitor antes de usá-los. O projeto não inclui trackers WebSocket, I2P ou Yggdrasil, pois exigem suporte/rede específica que o verificador atual não implementa.
 
 
-## Atualizador automático de IPv6/DDNS
+## Atualizador automático de IPv6/Dynu
 
-O script `src/ddns-updater.js` consulta duas APIs públicas de IPv6 (`api6.ipify.org` e `ipv6.icanhazip.com`), valida que a resposta é um IPv6 global e cancela a atualização se as APIs responderem com endereços diferentes. Ele tenta novamente a cada cinco minutos, usa timeout, não registra o conteúdo da resposta do provedor e só chama o DDNS quando o endereço detectado muda.
+O script `src/ddns-updater.js` consulta `https://api6.ipify.org` e `https://ipv6.icanhazip.com` para descobrir o IPv6 público de saída. Se ambas responderem, exige que os endereços coincidam; se só uma responder, usa o resultado disponível. Quando o IPv6 muda, envia o endereço diretamente ao endpoint oficial do Dynu, `https://api.dynu.com/nic/update`, com `myip=no` e `myipv6=<IPv6>`. O script só considera sucesso as respostas `good` ou `nochg`, guarda o último endereço localmente e verifica novamente a cada cinco minutos.
 
-Configure o arquivo local `.env` (ele está no `.gitignore`). Comece copiando o exemplo:
+Configure o `.env` **localmente no Termux**:
 
 ```sh
 cp .env.example .env
 nano .env
 ```
 
-Preencha `DDNS_IPV6_UPDATE_URL` com a URL oficial de atualização fornecida pelo seu serviço DDNS. Se a documentação oficial permitir informar o endereço no pedido, use `{ip}` no local exato indicado por essa documentação. Se a URL atualizar o endereço a partir do IP de origem da requisição, deixe-a no formato exato do provedor, sem inventar parâmetros. O script exige HTTPS e não envia a senha da conta a APIs de descoberta.
+Defina `DDNS_HOST`, `DDNS_USERNAME` e `DDNS_PASSWORD`. O arquivo de modelo no GitHub deve conter apenas campos vazios/de exemplo; nunca publique a senha real. O atualizador lê essas variáveis do ambiente ou do arquivo local `.env`.
 
-Execute separadamente do servidor web:
+Execute o atualizador em outro processo:
 
 ```sh
 npm run ddns
 ```
 
-O primeiro ciclo ocorre ao iniciar; depois, o script verifica a cada `DDNS_UPDATE_INTERVAL_MS` milissegundos (padrão: 300000). Para deixar o processo rodando no Termux, use seu gerenciador de processos preferido. O último IPv6 atualizado fica em `data/ddns-last-ip.json`, arquivo local ignorado pelo Git.
+O primeiro ciclo ocorre ao iniciar; depois, verifica a cada `DDNS_UPDATE_INTERVAL_MS` milissegundos (padrão: 300000). O último IPv6 confirmado fica em `data/ddns-last-ip.json`, ignorado pelo Git. As credenciais são enviadas somente ao endpoint HTTPS do Dynu e não são impressas nos logs.
 
-**Importante:** as APIs só descobrem o IPv6 público de saída. Elas não abrem portas nem garantem que o endereço detectado seja o IPv6 estável da interface do A10s. O registro AAAA, o firewall IPv6 do roteador e a porta do tracker ainda precisam estar configurados. Antes de ativar, confirme o formato da URL de atualização no painel do seu provedor: nem todo serviço DDNS aceita o endereço via `{ip}`.
+**Importante:** a API de descoberta identifica o IPv6 público usado para conexões de saída. Isso não abre portas de entrada nem garante que o endereço seja estável/acessível no Android. O registro AAAA e as regras de entrada da rede precisam permitir conexões ao servidor.
