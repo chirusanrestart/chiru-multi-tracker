@@ -6,8 +6,9 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/server.js",
-    "test": "npm run check && node --test"
+    "check": "node --check src/server.js && node --check src/ddns-updater.js",
+    "test": "npm run check && node --test",
+    "ddns": "node src/ddns-updater.js"
   },
   "keywords": [
     "bittorrent",
