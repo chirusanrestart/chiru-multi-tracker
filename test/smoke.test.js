@@ -12,6 +12,7 @@ test('package metadata and scripts are configured', () => {
   assert.equal(packageJson.type, 'module');
   assert.ok(packageJson.scripts.start);
   assert.ok(packageJson.scripts.check);
+  assert.ok(packageJson.scripts.test);
 });
 
 test('tracker configuration contains arrays of valid, unique URLs', () => {
@@ -48,4 +49,14 @@ test('UDP health check validates the transaction ID', () => {
 test('HTTP checks disclose that announce is not validated', () => {
   assert.ok(server.includes('announce not validated'));
   assert.ok(server.includes('![404, 410].includes(response.status)'));
+});
+
+test('dashboard and test helpers are present', async () => {
+  const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
+  assert.match(html, /Gerar magnet link/);
+  assert.match(html, /Verificar agora/);
+  assert.ok(server.includes("pathname === '/api/magnet'"));
+  assert.ok(server.includes("pathname === '/api/refresh'"));
+  assert.ok(server.includes('validHex'));
+  assert.ok(server.includes('URLSearchParams'));
 });
