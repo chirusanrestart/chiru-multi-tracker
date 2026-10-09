@@ -5,3 +5,4 @@ data/history.json
 .DS_Store
 data/ddns-last-ip.json
 data/discovered-trackers.json
+data/candidate-history.json
