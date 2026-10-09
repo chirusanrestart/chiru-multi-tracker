@@ -11,6 +11,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.resolve(__dirname, '../data');
 const TRACKERS_FILE = path.join(DATA_DIR, 'trackers.json');
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
+const PUBLIC_FILE = path.resolve(__dirname, '../public/index.html');
+const APP_VERSION = '2.1.2';
 
 const PORT = Number(process.env.PORT || 3000);
 const INTERVAL = 5 * 60 * 1000;
@@ -246,23 +248,69 @@ const server = http.createServer(async (req, res) => {
   const { pathname, searchParams } = url;
 
   if (pathname === '/') {
+    try {
+      const html = await fs.readFile(PUBLIC_FILE, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(html);
+    } catch {
+      return sendJSON(res, 500, { error: 'Interface web não encontrada' });
+    }
+  }
+
+  if (pathname === '/api/refresh') {
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST');
+      return sendJSON(res, 405, { error: 'Use POST para iniciar uma verificação' });
+    }
+    if (checking) return sendJSON(res, 409, { error: 'Uma verificação já está em andamento', checking: true });
+    await refresh();
     return sendJSON(res, 200, {
-      name: 'Chiru MultiTracker',
-      version: '2.1.0',
-      endpoints: [
-        '/api/status',
-        '/api/trackers',
-        '/api/list',
-        '/api/history',
-        '/api/history/summary'
-      ]
+      checking,
+      lastUpdate,
+      total: results.length,
+      online: results.filter(r => r.status === 'online').length,
+      offline: results.filter(r => r.status === 'offline').length
+    });
+  }
+
+  if (pathname === '/api/magnet') {
+    const hash = (searchParams.get('hash') || '').trim();
+    const validHex = /^[a-fA-F0-9]{40}$/.test(hash);
+    const validBase32 = /^[A-Z2-7]{32}$/i.test(hash);
+    if (!validHex && !validBase32) {
+      return sendJSON(res, 400, { error: 'Infohash inválido. Informe 40 caracteres hexadecimais ou 32 caracteres Base32.' });
+    }
+
+    const configured = getTrackerList(await readJSON(TRACKERS_FILE, {}));
+    const all = [...new Map(configured.map(t => [t.url, t])).values()];
+    const onlineOnly = searchParams.get('onlineOnly') === 'true';
+    const protocol = (searchParams.get('protocol') || '').toLowerCase();
+    const onlineSet = new Set(results.filter(r => r.status === 'online').map(r => r.url));
+    let trackers = all.filter(t => !onlineOnly || onlineSet.has(t.url));
+    if (protocol) trackers = trackers.filter(t => {
+      try { return new URL(t.url).protocol.slice(0, -1) === protocol; } catch { return false; }
+    });
+    trackers = trackers.slice(0, 50);
+
+    const params = new URLSearchParams();
+    params.set('xt', `urn:btih:${hash}`);
+    const name = searchParams.get('dn');
+    if (name) params.set('dn', name.slice(0, 200));
+    for (const tracker of trackers) params.append('tr', tracker.url);
+    const magnet = `magnet:?${params.toString()}`;
+    return sendJSON(res, 200, {
+      magnet,
+      count: trackers.length,
+      trackers: trackers.map(t => t.url),
+      onlineOnly,
+      note: 'Tracker URLs are included in the magnet; this does not verify that the infohash exists or that peers are available.'
     });
   }
 
   if (pathname === '/api/status') {
     return sendJSON(res, 200, {
       service: 'Chiru MultiTracker',
-      version: '2.1.0',
+      version: APP_VERSION,
       checking,
       lastUpdate,
       total: results.length,
@@ -363,7 +411,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', async () => {
-  console.log(`📡 Chiru MultiTracker v2.1 em http://localhost:${PORT}`);
+  console.log(`📡 Chiru MultiTracker v${APP_VERSION} em http://localhost:${PORT}`);
 
   await refresh();
   setInterval(refresh, INTERVAL);
