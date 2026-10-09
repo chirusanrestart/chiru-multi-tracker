@@ -305,7 +305,7 @@ const server = http.createServer(async (req, res) => {
     const onlineOnly = searchParams.get('onlineOnly') === 'true';
     const protocol = (searchParams.get('protocol') || '').toLowerCase();
     const onlineSet = new Set(results.filter(r => r.status === 'online').map(r => r.url));
-    let trackers = all.filter(t => !onlineOnly || onlineSet.has(t.url));
+    let trackers = all.filter(t => !onlineOnly || onlineSet.has(t.url) || t.url === PUBLIC_TRACKER_URL);
     if (protocol) trackers = trackers.filter(t => {
       try { return new URL(t.url).protocol.slice(0, -1) === protocol; } catch { return false; }
     });
