@@ -139,9 +139,12 @@ async function checkTracker(item) {
 
         // HTTP resposta indica acessibilidade, não garante announce válido.
         result = {
-          online: response.status < 500,
+          online: response.status < 500 && ![404, 410].includes(response.status),
           httpStatus: response.status,
-          note: 'HTTP reachability only'
+          note: 'HTTP reachability only; announce not validated',
+          ...([404, 410].includes(response.status)
+            ? { error: 'endpoint não encontrado' }
+            : {})
         };
       } finally {
         clearTimeout(timer);
@@ -171,7 +174,8 @@ async function checkTracker(item) {
 }
 
 async function saveHistory() {
-  const history = await readJSON(HISTORY_FILE, []);
+  const storedHistory = await readJSON(HISTORY_FILE, []);
+  const history = Array.isArray(storedHistory) ? storedHistory : [];
 
   history.push({
     timestamp: lastUpdate,
@@ -233,7 +237,12 @@ function sendJSON(res, status, data) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  let url;
+  try {
+    url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  } catch {
+    return sendJSON(res, 400, { error: 'URL de requisição inválida' });
+  }
   const { pathname, searchParams } = url;
 
   if (pathname === '/') {
@@ -244,7 +253,8 @@ const server = http.createServer(async (req, res) => {
         '/api/status',
         '/api/trackers',
         '/api/list',
-        '/api/history'
+        '/api/history',
+        '/api/history/summary'
       ]
     });
   }
@@ -291,9 +301,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/api/history') {
-    const history = await readJSON(HISTORY_FILE, []);
-    const requested = Number(searchParams.get('limit') || 24);
-    const limit = Math.max(1, Math.min(requested, HISTORY_LIMIT));
+    const storedHistory = await readJSON(HISTORY_FILE, []);
+    const history = Array.isArray(storedHistory) ? storedHistory : [];
+    const requested = Number.parseInt(searchParams.get('limit') || '24', 10);
+    const limit = Number.isFinite(requested)
+      ? Math.max(1, Math.min(requested, HISTORY_LIMIT))
+      : 24;
 
     return sendJSON(res, 200, {
       count: Math.min(history.length, limit),
@@ -303,7 +316,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname === '/api/history/summary') {
-    const history = await readJSON(HISTORY_FILE, []);
+    const storedHistory = await readJSON(HISTORY_FILE, []);
+    const history = Array.isArray(storedHistory) ? storedHistory : [];
     const summary = new Map();
 
     for (const snapshot of history) {
