@@ -25,13 +25,29 @@ PORT=8080 npm start
 
 O histórico é salvo em `data/history.json`, criado automaticamente e ignorado pelo Git. As verificações são repetidas a cada cinco minutos; no máximo cinco trackers são verificados em paralelo.
 
+## Tracker HTTP próprio (v2.2.0)
+
+O servidor também implementa os endpoints HTTP BitTorrent `/announce` e `/scrape`, com respostas bencoded, peers compactos IPv4 e IPv6 (BEP 7), registro local de peers, expiração de peers e limites básicos por IP. Ele pode ser usado por clientes BitTorrent comuns que aceitem trackers HTTP.
+
+Para colocar o tracker nos magnets gerados, defina `PUBLIC_TRACKER_URL` como o endereço público completo terminado em `/announce`:
+
+```sh
+PUBLIC_TRACKER_URL='http://seu-dominio-dynu:3000/announce' npm start
+```
+
+Use um domínio Dynu com registro AAAA para IPv6 (e A se também tiver IPv4), ou HTTPS atrás de um proxy reverso configurado por você. O servidor escuta em `::` por padrão; use `BIND_HOST=0.0.0.0` para IPv4 somente. A rede precisa permitir conexões de entrada na porta escolhida. Em redes móveis, isso pode ser bloqueado mesmo quando o aparelho tem IPv6. Não exponha o endpoint publicamente sem entender que qualquer cliente poderá anunciar torrents nele.
+
+**Como o multi-tracker funciona:** os magnets gerados incluem nosso tracker e trackers públicos externos. Os clientes BitTorrent conectam-se diretamente a cada tracker listado e juntam os peers que recebem. O tracker próprio mantém os peers que anunciam a ele; ele não faz proxy de announces para outros trackers nem consegue obrigá-los a revelar suas listas de peers. Isso preserva a compatibilidade com clientes comuns.
+
 ## API
 
 - `GET /` - dashboard web
 - `POST /api/refresh` - dispara uma verificação manual (retorna 409 se já houver uma em andamento)
-- `GET /api/magnet?hash=INFOHASH&dn=NOME` - gera um magnet link com os trackers configurados; `hash` aceita 40 caracteres hexadecimais ou 32 em Base32
+- `GET /api/magnet?hash=INFOHASH&dn=NOME` - gera um magnet link com o tracker próprio configurado e os trackers externos; `hash` aceita 40 caracteres hexadecimais ou 32 em Base32
 - `GET /` - dashboard web
-- `GET /api/status` - estado geral do serviço e horário da última verificação
+- `GET /api/status` - estado geral, horário da última verificação e contagem local de swarms/peers
+- `GET /announce` - endpoint HTTP BitTorrent announce (resposta bencoded)
+- `GET /scrape?info_hash=...` - estatísticas do swarm local para um infohash (quando suportado pelo cliente)
 - `GET /api/trackers` - lista completa; filtros opcionais: `category`, `status` e `protocol`
 - `GET /api/list` - URLs dos trackers marcados como online, ordenadas por latência; filtro opcional: `protocol`
 - `GET /api/history?limit=24` - snapshots recentes (limite máximo de 288)
