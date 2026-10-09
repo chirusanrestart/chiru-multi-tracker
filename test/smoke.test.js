@@ -18,7 +18,7 @@ test('package metadata and scripts are configured', () => {
 test('tracker configuration contains arrays of valid, unique URLs', () => {
   assert.ok(trackers && typeof trackers === 'object' && !Array.isArray(trackers));
   const urls = Object.values(trackers).flat();
-  assert.ok(urls.length > 0, 'at least one tracker should be configured');
+  assert.ok(urls.length >= 50, 'the public tracker pool should remain substantial');
   assert.equal(new Set(urls).size, urls.length, 'tracker URLs should be unique');
 
   for (const url of urls) {
