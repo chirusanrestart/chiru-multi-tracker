@@ -91,7 +91,8 @@ async function main() {
   });
   const retryUrls = new Set(retry.map(item => item.url));
   const freshBatch = [];
-  for (let i = 0; i < candidates.length && freshBatch.length < BATCH_SIZE; i++) {
+  const freshLimit = Math.max(0, BATCH_SIZE - Math.min(retry.length, BATCH_SIZE));
+  for (let i = 0; i < candidates.length && freshBatch.length < freshLimit; i++) {
     const item = candidates[(start + i) % candidates.length];
     if (!retryUrls.has(item.url)) freshBatch.push(item);
   }
