@@ -6,15 +6,18 @@ import dns from 'node:dns/promises';
 import dgram from 'node:dgram';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { handleTrackerRequest, trackerStats } from './tracker.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.resolve(__dirname, '../data');
 const TRACKERS_FILE = path.join(DATA_DIR, 'trackers.json');
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
 const PUBLIC_FILE = path.resolve(__dirname, '../public/index.html');
-const APP_VERSION = '2.1.2';
+const APP_VERSION = '2.2.0';
 
 const PORT = Number(process.env.PORT || 3000);
+const BIND_HOST = process.env.BIND_HOST || '::';
+const PUBLIC_TRACKER_URL = (process.env.PUBLIC_TRACKER_URL || '').trim();
 const INTERVAL = 5 * 60 * 1000;
 const TIMEOUT = 6000;
 const HISTORY_LIMIT = 288; // 24 horas, verificando a cada 5 min
@@ -229,6 +232,16 @@ async function refresh() {
   }
 }
 
+function isPublicTrackerUrl(value) {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return ['http:', 'https:'].includes(parsed.protocol) && parsed.pathname === '/announce' && !parsed.username && !parsed.password;
+  } catch {
+    return false;
+  }
+}
+
 function sendJSON(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -246,6 +259,9 @@ const server = http.createServer(async (req, res) => {
     return sendJSON(res, 400, { error: 'URL de requisição inválida' });
   }
   const { pathname, searchParams } = url;
+
+  // Standard BitTorrent HTTP tracker endpoints, compatible with ordinary clients.
+  if (handleTrackerRequest(req, res)) return;
 
   if (pathname === '/') {
     try {
@@ -282,7 +298,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     const configured = getTrackerList(await readJSON(TRACKERS_FILE, {}));
-    const all = [...new Map(configured.map(t => [t.url, t])).values()];
+    const customTracker = isPublicTrackerUrl(PUBLIC_TRACKER_URL)
+      ? [{ url: PUBLIC_TRACKER_URL, category: 'chiru' }]
+      : [];
+    const all = [...new Map([...customTracker, ...configured].map(t => [t.url, t])).values()];
     const onlineOnly = searchParams.get('onlineOnly') === 'true';
     const protocol = (searchParams.get('protocol') || '').toLowerCase();
     const onlineSet = new Set(results.filter(r => r.status === 'online').map(r => r.url));
@@ -315,7 +334,9 @@ const server = http.createServer(async (req, res) => {
       lastUpdate,
       total: results.length,
       online: results.filter(r => r.status === 'online').length,
-      offline: results.filter(r => r.status === 'offline').length
+      offline: results.filter(r => r.status === 'offline').length,
+      tracker: { enabled: true, announcePath: '/announce', scrapePath: '/scrape', ...trackerStats() },
+      publicAnnounceUrlConfigured: isPublicTrackerUrl(PUBLIC_TRACKER_URL)
     });
   }
 
@@ -410,8 +431,10 @@ const server = http.createServer(async (req, res) => {
   return sendJSON(res, 404, { error: 'Rota não encontrada' });
 });
 
-server.listen(PORT, '0.0.0.0', async () => {
-  console.log(`📡 Chiru MultiTracker v${APP_VERSION} em http://localhost:${PORT}`);
+server.listen(PORT, BIND_HOST, async () => {
+  console.log(`📡 Chiru MultiTracker v${APP_VERSION} em http://localhost:${PORT} (bind ${BIND_HOST})`);
+  if (isPublicTrackerUrl(PUBLIC_TRACKER_URL)) console.log(`🌐 Tracker público configurado: ${PUBLIC_TRACKER_URL}`);
+  else console.log('ℹ️ Configure PUBLIC_TRACKER_URL com seu endereço público /announce para incluí-lo nos magnets.');
 
   await refresh();
   setInterval(refresh, INTERVAL);
