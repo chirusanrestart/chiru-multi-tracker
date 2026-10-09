@@ -29,13 +29,13 @@ O histórico é salvo em `data/history.json`, criado automaticamente e ignorado 
 
 O servidor também implementa os endpoints HTTP BitTorrent `/announce` e `/scrape`, com respostas bencoded, peers compactos IPv4 e IPv6 (BEP 7), registro local de peers, expiração de peers e limites básicos por IP. Ele pode ser usado por clientes BitTorrent comuns que aceitem trackers HTTP.
 
-Para colocar o tracker nos magnets gerados, defina `PUBLIC_TRACKER_URL` como o endereço público completo terminado em `/announce`:
+O endereço público padrão já está configurado como `http://chirusanrestart.freeddns.org:3000/announce`, então ele será incluído automaticamente nos magnets gerados. Se mudar de domínio ou porta, você pode substituir o padrão pela variável `PUBLIC_TRACKER_URL` ao iniciar:
 
 ```sh
 PUBLIC_TRACKER_URL='http://seu-dominio-dynu:3000/announce' npm start
 ```
 
-Use um domínio Dynu com registro AAAA para IPv6 (e A se também tiver IPv4), ou HTTPS atrás de um proxy reverso configurado por você. O servidor escuta em `::` por padrão; use `BIND_HOST=0.0.0.0` para IPv4 somente. A rede precisa permitir conexões de entrada na porta escolhida. Em redes móveis, isso pode ser bloqueado mesmo quando o aparelho tem IPv6. Não exponha o endpoint publicamente sem entender que qualquer cliente poderá anunciar torrents nele.
+Use um domínio Dynu com registro AAAA apontando para o IPv6 atual (e registro A se também tiver IPv4), ou HTTPS atrás de um proxy reverso configurado por você. O servidor escuta em `::` por padrão; use `BIND_HOST=0.0.0.0` para IPv4 somente. A rede precisa permitir conexões de entrada na porta escolhida. Em redes móveis, isso pode ser bloqueado mesmo quando o aparelho tem IPv6. Não exponha o endpoint publicamente sem entender que qualquer cliente poderá anunciar torrents nele.
 
 **Como o multi-tracker funciona:** os magnets gerados incluem nosso tracker e trackers públicos externos. Os clientes BitTorrent conectam-se diretamente a cada tracker listado e juntam os peers que recebem. O tracker próprio mantém os peers que anunciam a ele; ele não faz proxy de announces para outros trackers nem consegue obrigá-los a revelar suas listas de peers. Isso preserva a compatibilidade com clientes comuns.
 
