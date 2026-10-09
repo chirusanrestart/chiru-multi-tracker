@@ -39,6 +39,14 @@ Use um domínio Dynu com registro AAAA apontando para o IPv6 atual (e registro A
 
 **Como o multi-tracker funciona:** os magnets gerados incluem nosso tracker e trackers públicos externos. Os clientes BitTorrent conectam-se diretamente a cada tracker listado e juntam os peers que recebem. O tracker próprio mantém os peers que anunciam a ele; ele não faz proxy de announces para outros trackers nem consegue obrigá-los a revelar suas listas de peers. Isso preserva a compatibilidade com clientes comuns.
 
+## Descoberta de novos trackers
+
+Execute `npm run discover` para consultar listas públicas de trackers mantidas por projetos externos, comparar os endereços com `data/trackers.json` e salvar candidatos novos em `data/discovered-trackers.json`.
+
+O script consulta as listas `trackers_best`, `trackers_all_udp`, `trackers_all_http` e `trackers_all_https` do [ngosang/trackerslist](https://github.com/ngosang/trackerslist), além da lista comunitária [DeSireFire/animeTrackerList](https://github.com/DeSireFire/animeTrackerList). Se uma fonte falhar, as demais ainda são processadas.
+
+**Segurança da lista:** descoberta não significa validação. Os candidatos são salvos separadamente e não são ativados automaticamente, pois uma URL encontrada em uma lista pode estar offline ou não aceitar announces válidos. Revise os resultados e use o monitor para testar os endpoints antes de copiá-los para `data/trackers.json`. O arquivo gerado fica local e não é versionado automaticamente pelo script.
+
 ## API
 
 - `GET /` - dashboard web
