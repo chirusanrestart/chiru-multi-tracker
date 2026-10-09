@@ -60,3 +60,50 @@ test('dashboard and test helpers are present', async () => {
   assert.ok(server.includes('validHex'));
   assert.ok(server.includes('URLSearchParams'));
 });
+
+
+test('HTTP tracker implements announce and scrape endpoints', async () => {
+  const tracker = await readFile(new URL('../src/tracker.js', import.meta.url), 'utf8');
+  assert.ok(tracker.includes("pathname !== '/announce' && pathname !== '/scrape'"));
+  assert.ok(tracker.includes("'peers6'"));
+  assert.ok(tracker.includes("'failure reason'"));
+  assert.ok(tracker.includes("files.set(hash"));
+});
+
+test('tracker bencode preserves binary dictionary keys and raw query bytes', async () => {
+  const { trackerInternals } = await import('../src/tracker.js');
+  const query = trackerInternals.parseRawQuery('/announce?info_hash=%00%FF%7F&peer_id=%41%42');
+  assert.deepEqual(query.get('info_hash'), Buffer.from([0, 255, 127]));
+  assert.deepEqual(query.get('peer_id'), Buffer.from([65, 66]));
+  const encoded = trackerInternals.bencode(new Map([[Buffer.from([0, 255]), { complete: 1 }]]));
+  assert.ok(encoded.includes(Buffer.from([0, 255])));
+  assert.equal(encoded[0], 0x64); // d
+});
+
+test('tracker announce returns compact peers to a second peer', async () => {
+  const { handleTrackerRequest } = await import('../src/tracker.js');
+  const hash = Buffer.alloc(20, 0x5a);
+  const peerIdA = Buffer.alloc(20, 0x41);
+  const peerIdB = Buffer.alloc(20, 0x42);
+  const hexQuery = buffer => [...buffer].map(byte => '%' + byte.toString(16).padStart(2, '0')).join('');
+  const announce = (peerId, ip) => {
+    const req = {
+      method: 'GET',
+      url: '/announce?info_hash=' + hexQuery(hash) + '&peer_id=' + hexQuery(peerId) + '&port=6881&uploaded=0&downloaded=0&left=100&event=started&numwant=50',
+      socket: { remoteAddress: ip }
+    };
+    const res = {
+      statusCode: 0, headers: {}, body: null,
+      writeHead(status, headers) { this.statusCode = status; this.headers = headers; },
+      end(body) { this.body = body; }
+    };
+    assert.equal(handleTrackerRequest(req, res), true);
+    return res;
+  };
+  const first = announce(peerIdA, '127.0.0.1');
+  const second = announce(peerIdB, '127.0.0.2');
+  assert.equal(first.statusCode, 200);
+  assert.equal(second.statusCode, 200);
+  assert.ok(Buffer.isBuffer(second.body));
+  assert.ok(second.body.includes(Buffer.from([127, 0, 0, 1, 0x1a, 0xe1])));
+});
