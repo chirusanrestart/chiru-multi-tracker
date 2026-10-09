@@ -13,7 +13,7 @@ const DATA_DIR = path.resolve(__dirname, '../data');
 const TRACKERS_FILE = path.join(DATA_DIR, 'trackers.json');
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
 const PUBLIC_FILE = path.resolve(__dirname, '../public/index.html');
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.2.1';
 
 const PORT = Number(process.env.PORT || 3000);
 const BIND_HOST = process.env.BIND_HOST || '::';
@@ -260,6 +260,16 @@ const server = http.createServer(async (req, res) => {
   }
   const { pathname, searchParams } = url;
 
+  // Simple endpoint to verify that the process is reachable without tracker parameters.
+  if (pathname === '/healthz') {
+    return sendJSON(res, 200, {
+      ok: true,
+      service: 'Chiru MultiTracker',
+      version: APP_VERSION,
+      address: server.address()
+    });
+  }
+
   // Standard BitTorrent HTTP tracker endpoints, compatible with ordinary clients.
   if (handleTrackerRequest(req, res)) return;
 
@@ -431,8 +441,19 @@ const server = http.createServer(async (req, res) => {
   return sendJSON(res, 404, { error: 'Rota não encontrada' });
 });
 
-server.listen(PORT, BIND_HOST, async () => {
-  console.log(`📡 Chiru MultiTracker v${APP_VERSION} em http://localhost:${PORT} (bind ${BIND_HOST})`);
+server.on('error', error => {
+  console.error(`❌ Falha ao abrir o servidor HTTP na porta ${PORT} (bind ${BIND_HOST}): ${error.code || error.message}`);
+  if (error.code === 'EADDRINUSE') console.error('➡️ A porta já está em uso por outro processo.');
+  if (error.code === 'EACCES') console.error('➡️ O Android/Termux não permitiu abrir essa porta.');
+  process.exitCode = 1;
+});
+
+// Ask Node to keep IPv4-mapped connections enabled when listening on IPv6.
+server.listen({ port: PORT, host: BIND_HOST, ipv6Only: false }, async () => {
+  const address = server.address();
+  console.log(`📡 Chiru MultiTracker v${APP_VERSION} iniciado; bind=${BIND_HOST}; porta=${PORT}; endereço=${JSON.stringify(address)}`);
+  console.log(`🩺 Teste local: http://127.0.0.1:${PORT}/healthz`);
+  console.log(`🩺 Teste pela rede: http://IP-DO-CELULAR:${PORT}/healthz`);
   if (isPublicTrackerUrl(PUBLIC_TRACKER_URL)) console.log(`🌐 Tracker público configurado: ${PUBLIC_TRACKER_URL}`);
   else console.log('ℹ️ Configure PUBLIC_TRACKER_URL com seu endereço público /announce para incluí-lo nos magnets.');
 
