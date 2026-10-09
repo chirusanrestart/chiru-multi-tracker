@@ -17,7 +17,7 @@ const APP_VERSION = '2.2.0';
 
 const PORT = Number(process.env.PORT || 3000);
 const BIND_HOST = process.env.BIND_HOST || '::';
-const PUBLIC_TRACKER_URL = (process.env.PUBLIC_TRACKER_URL || '').trim();
+const PUBLIC_TRACKER_URL = (process.env.PUBLIC_TRACKER_URL || 'http://chirusanrestart.freeddns.org:3000/announce').trim();
 const INTERVAL = 5 * 60 * 1000;
 const TIMEOUT = 6000;
 const HISTORY_LIMIT = 288; // 24 horas, verificando a cada 5 min
