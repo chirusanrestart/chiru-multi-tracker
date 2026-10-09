@@ -15,7 +15,7 @@
     "monitor",
     "api"
   ],
-  "license": "MIT",
+  "license": "ISC",
   "engines": {
     "node": ">=18"
   }
