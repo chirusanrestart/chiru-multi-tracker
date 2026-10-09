@@ -6,10 +6,11 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/server.js && node --check src/ddns-updater.js && node --check scripts/discover-trackers.js",
+    "check": "node --check src/server.js && node --check src/ddns-updater.js && node --check scripts/discover-trackers.js && node --check scripts/evaluate-trackers.js",
     "test": "npm run check && node --test",
     "ddns": "node src/ddns-updater.js",
-    "discover": "node scripts/discover-trackers.js"
+    "discover": "node scripts/discover-trackers.js",
+    "evaluate": "node scripts/evaluate-trackers.js"
   },
   "keywords": [
     "bittorrent",
