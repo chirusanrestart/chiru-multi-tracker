@@ -1,14 +1,22 @@
 {
-  "name": "chiru-multitracker",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "chiru-multi-tracker",
+  "version": "2.1.1",
+  "description": "Agregador e monitor de disponibilidade de trackers BitTorrent com API HTTP.",
+  "type": "module",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "check": "node --check src/server.js",
+    "test": "npm run check"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module"
+  "keywords": [
+    "bittorrent",
+    "tracker",
+    "monitor",
+    "api"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
 }
