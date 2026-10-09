@@ -83,9 +83,19 @@ async function main() {
   }
 
   const start = Number.isInteger(historyData.cursor) ? historyData.cursor % candidates.length : 0;
-  const batch = Array.from({ length: Math.min(BATCH_SIZE, candidates.length) },
-    (_, i) => candidates[(start + i) % candidates.length]);
   const nextHistory = historyData.trackers && typeof historyData.trackers === 'object' ? historyData.trackers : {};
+  // Retest one-time successes on the next six-hour cycle before moving on.
+  const retry = candidates.filter(item => {
+    const h = nextHistory[item.url];
+    return h && h.consecutiveSuccesses === 1;
+  });
+  const retryUrls = new Set(retry.map(item => item.url));
+  const freshBatch = [];
+  for (let i = 0; i < candidates.length && freshBatch.length < BATCH_SIZE; i++) {
+    const item = candidates[(start + i) % candidates.length];
+    if (!retryUrls.has(item.url)) freshBatch.push(item);
+  }
+  const batch = [...retry.slice(0, BATCH_SIZE), ...freshBatch.slice(0, Math.max(0, BATCH_SIZE - Math.min(retry.length, BATCH_SIZE)))];
   let passed = 0;
 
   for (const candidate of batch) {
@@ -121,7 +131,7 @@ async function main() {
   await fs.writeFile(HISTORY_FILE, JSON.stringify({
     version: 1,
     updatedAt: new Date().toISOString(),
-    cursor: (start + batch.length) % candidates.length,
+    cursor: (start + freshBatch.length) % candidates.length,
     batchSize: BATCH_SIZE,
     requiredConsecutiveSuccesses: REQUIRED_SUCCESSES,
     trackers: nextHistory
