@@ -115,7 +115,7 @@ async function main() {
       active.add(item.url);
       console.log(`★ Promovido para geral: ${item.url}`);
     }
-    await fs.writeFile(ACTIVE_FILE, JSON.stringify(activeData, null, 2) + '\\n');
+    await fs.writeFile(ACTIVE_FILE, JSON.stringify(activeData, null, 2) + '\n');
   }
 
   await fs.writeFile(HISTORY_FILE, JSON.stringify({
@@ -125,9 +125,9 @@ async function main() {
     batchSize: BATCH_SIZE,
     requiredConsecutiveSuccesses: REQUIRED_SUCCESSES,
     trackers: nextHistory
-  }, null, 2) + '\\n');
+  }, null, 2) + '\n');
 
-  console.log(`\\nAvaliação concluída: ${passed}/${batch.length} responderam ao handshake UDP.`);
+  console.log(`\nAvaliação concluída: ${passed}/${batch.length} responderam ao handshake UDP.`);
   console.log(`Promovidos nesta execução: ${eligible.length}. Máximo por execução: ${MAX_PROMOTE}.`);
   console.log('HTTP/HTTPS permanecem candidatos: uma resposta HTTP simples não comprova um announce BitTorrent válido.');
 }
