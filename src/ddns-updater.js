@@ -93,7 +93,7 @@ async function readState() {
 }
 
 function getDynuConfig() {
-  const hostname = (process.env.DDYNS_HOST || process.env.DDNS_HOST || '').trim();
+  const hostname = (process.env.DDNS_HOST || '').trim();
   const username = (process.env.DDNS_USERNAME || '').trim();
   const password = process.env.DDNS_PASSWORD || '';
   if (!hostname || !username || !password) {
