@@ -6,9 +6,13 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = path.join(ROOT, 'data');
 const STATE_FILE = path.join(DATA_DIR, 'ddns-last-ip.json');
-const INTERVAL_MS = positiveInteger(process.env.DDNS_UPDATE_INTERVAL_MS, 5 * 60 * 1000);
-const TIMEOUT_MS = positiveInteger(process.env.DDNS_TIMEOUT_MS, 10000);
-const UPDATE_URL = (process.env.DDNS_IPV6_UPDATE_URL || '').trim();
+function intervalMs() {
+  return positiveInteger(process.env.DDNS_UPDATE_INTERVAL_MS, 5 * 60 * 1000);
+}
+
+function timeoutMs() {
+  return positiveInteger(process.env.DDNS_TIMEOUT_MS, 10000);
+}
 
 function positiveInteger(value, fallback) {
   const parsed = Number.parseInt(value || '', 10);
@@ -46,7 +50,7 @@ function isGlobalIPv6(value) {
 
 async function fetchIPv6(endpoint) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs());
   try {
     const response = await fetch(endpoint, {
       headers: { accept: 'text/plain' },
@@ -91,13 +95,14 @@ async function readState() {
 }
 
 async function updateDDNS(ip) {
-  if (!UPDATE_URL) {
+  const updateUrl = (process.env.DDNS_IPV6_UPDATE_URL || '').trim();
+  if (!updateUrl) {
     throw new Error('configure DDNS_IPV6_UPDATE_URL no .env com a URL oficial de atualização do provedor');
   }
 
   let url;
   try {
-    url = new URL(UPDATE_URL.replaceAll('{ip}', encodeURIComponent(ip)));
+    url = new URL(updateUrl.replaceAll('{ip}', encodeURIComponent(ip)));
   } catch {
     throw new Error('DDNS_IPV6_UPDATE_URL não é uma URL válida');
   }
@@ -169,7 +174,7 @@ async function main() {
   };
 
   await tick();
-  setInterval(tick, INTERVAL_MS);
+  setInterval(tick, intervalMs());
 }
 
 main().catch(error => {
