@@ -474,11 +474,39 @@ const server = http.createServer(async (req, res) => {
 
 let ddnsUpdater = null;
 let discoveryProcess = null;
+let evaluationProcess = null;
 let discoveryTimer = null;
 const DISCOVERY_INTERVAL = Math.max(
   60_000,
   Number(process.env.TRACKER_DISCOVERY_INTERVAL_MS || 6 * 60 * 60 * 1000)
 );
+
+function runCandidateEvaluation() {
+  if (process.env.DISABLE_TRACKER_AUTO_PROMOTION === '1') {
+    console.log('ℹ️ Avaliação/promoção automática desativada por DISABLE_TRACKER_AUTO_PROMOTION=1.');
+    return;
+  }
+  if (evaluationProcess) {
+    console.log('ℹ️ Avaliação de candidatos já está em andamento; execução duplicada ignorada.');
+    return;
+  }
+
+  const scriptPath = path.resolve(__dirname, '../scripts/evaluate-trackers.js');
+  console.log('🧪 Avaliando um lote de candidatos UDP para possível promoção...');
+  evaluationProcess = spawn(process.execPath, [scriptPath], {
+    stdio: 'inherit',
+    env: process.env
+  });
+  evaluationProcess.on('error', error => {
+    console.error(`❌ Não foi possível iniciar a avaliação de candidatos: ${error.message}`);
+    evaluationProcess = null;
+  });
+  evaluationProcess.on('exit', (code, signal) => {
+    if (code === 0) console.log('✅ Avaliação de candidatos concluída.');
+    else console.error(`⚠️ Avaliação de candidatos terminou (código=${code}, sinal=${signal || 'nenhum'}).`);
+    evaluationProcess = null;
+  });
+}
 
 function runTrackerDiscovery() {
   if (process.env.DISABLE_TRACKER_DISCOVERY === '1') {
@@ -502,7 +530,7 @@ function runTrackerDiscovery() {
     discoveryProcess = null;
   });
   discoveryProcess.on('exit', (code, signal) => {
-    if (code === 0) console.log('✅ Descoberta automática concluída; candidatos atualizados em data/discovered-trackers.json.');
+    if (code === 0) {\n      console.log('✅ Descoberta automática concluída; candidatos atualizados em data/discovered-trackers.json.');\n      runCandidateEvaluation();\n    }
     else console.error(`⚠️ Descoberta de trackers terminou (código=${code}, sinal=${signal || 'nenhum'}).`);
     discoveryProcess = null;
   });
