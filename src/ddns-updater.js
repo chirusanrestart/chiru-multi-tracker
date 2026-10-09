@@ -135,11 +135,10 @@ async function updateDynu(ip) {
 async function runOnce() {
   const ip = await discoverIPv6();
   const previous = await readState();
-  if (previous.ipv6 === ip && previous.updatedAt) {
-    console.log(`ℹ️ IPv6 não mudou (${ip}); sem chamada ao Dynu.`);
-    return;
-  }
 
+  // Sempre sincroniza com o Dynu, mesmo quando o IPv6 parece igual ao último
+  // salvo localmente. Isso corrige um registro DNS desatualizado no próximo ciclo.
+  // Se já estiver correto, o Dynu responde "nochg".
   const response = await updateDynu(ip);
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(STATE_FILE, JSON.stringify({
@@ -148,9 +147,12 @@ async function runOnce() {
     dynuResponse: response.split(/\s+/)[0]
   }, null, 2) + '\n', { mode: 0o600 });
 
-  console.log(`✅ Dynu atualizado para ${ip} em ${new Date().toISOString()} (${response.split(/\s+/)[0]}).`);
+  const changed = previous.ipv6 !== ip;
+  const action = response.split(/\s+/)[0].toLowerCase() === 'nochg'
+    ? 'registro já estava sincronizado'
+    : 'registro atualizado';
+  console.log(\`✅ Dynu verificado: IPv6 \${ip}; \${action}; \${changed ? 'IP mudou' : 'IP igual ao ciclo anterior'}; próxima verificação em \${Math.round(intervalMs() / 60000)} min.\`);
 }
-
 async function main() {
   await loadEnvFile();
   console.log('🛰️ Chiru MultiTracker: atualizador IPv6/Dynu iniciado.');
