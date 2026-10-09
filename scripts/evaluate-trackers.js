@@ -10,7 +10,8 @@ const DATA = path.join(ROOT, 'data');
 const CANDIDATES_FILE = path.join(DATA, 'discovered-trackers.json');
 const ACTIVE_FILE = path.join(DATA, 'trackers.json');
 const HISTORY_FILE = path.join(DATA, 'candidate-history.json');
-const BATCH_SIZE = Math.max(1, Math.min(50, Number(process.env.TRACKER_CANDIDATE_BATCH || 20)));
+const BATCH_SIZE = Math.max(1, Math.min(100, Number(process.env.TRACKER_CANDIDATE_BATCH || 50)));
+const CONCURRENCY = Math.max(1, Math.min(20, Number(process.env.TRACKER_CANDIDATE_CONCURRENCY || 5)));
 const MAX_PROMOTE = Math.max(0, Math.min(20, Number(process.env.TRACKER_MAX_PROMOTE || 5)));
 const TIMEOUT_MS = 4000;
 const REQUIRED_SUCCESSES = 2;
@@ -99,19 +100,25 @@ async function main() {
   const batch = [...retry.slice(0, BATCH_SIZE), ...freshBatch.slice(0, Math.max(0, BATCH_SIZE - Math.min(retry.length, BATCH_SIZE)))];
   let passed = 0;
 
-  for (const candidate of batch) {
-    const result = await udpHandshake(candidate.url);
-    const previous = nextHistory[candidate.url] || { checks: 0, successes: 0, consecutiveSuccesses: 0 };
-    previous.checks++;
-    previous.lastCheckedAt = new Date().toISOString();
-    previous.lastResult = result.ok ? 'udp-connect-ok' : 'failed';
-    previous.lastError = result.ok ? null : result.error;
-    previous.consecutiveSuccesses = result.ok ? (previous.consecutiveSuccesses || 0) + 1 : 0;
-    previous.successes = (previous.successes || 0) + (result.ok ? 1 : 0);
-    nextHistory[candidate.url] = previous;
-    if (result.ok) passed++;
-    console.log(`${result.ok ? '✓' : '×'} ${candidate.url} ${result.ok ? 'UDP connect respondeu' : result.error}`);
-  }
+  // Testa em pequenos grupos paralelos: mais cobertura sem esperar 4 s por candidato em série.
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(CONCURRENCY, batch.length) }, async () => {
+    while (nextIndex < batch.length) {
+      const candidate = batch[nextIndex++];
+      const result = await udpHandshake(candidate.url);
+      const previous = nextHistory[candidate.url] || { checks: 0, successes: 0, consecutiveSuccesses: 0 };
+      previous.checks++;
+      previous.lastCheckedAt = new Date().toISOString();
+      previous.lastResult = result.ok ? 'udp-connect-ok' : 'failed';
+      previous.lastError = result.ok ? null : result.error;
+      previous.consecutiveSuccesses = result.ok ? (previous.consecutiveSuccesses || 0) + 1 : 0;
+      previous.successes = (previous.successes || 0) + (result.ok ? 1 : 0);
+      nextHistory[candidate.url] = previous;
+      if (result.ok) passed++;
+      console.log(`${result.ok ? '✓' : '×'} ${candidate.url} ${result.ok ? 'UDP connect respondeu' : result.error}`);
+    }
+  });
+  await Promise.all(workers);
 
   // Only promote UDP endpoints after successful handshakes in two separate runs.
   const eligible = candidates.filter(item => {
@@ -134,11 +141,13 @@ async function main() {
     updatedAt: new Date().toISOString(),
     cursor: (start + freshBatch.length) % candidates.length,
     batchSize: BATCH_SIZE,
+    concurrency: CONCURRENCY,
     requiredConsecutiveSuccesses: REQUIRED_SUCCESSES,
     trackers: nextHistory
   }, null, 2) + '\n');
 
   console.log(`\nAvaliação concluída: ${passed}/${batch.length} responderam ao handshake UDP.`);
+  console.log(`Lote configurado: ${BATCH_SIZE}; concorrência: ${CONCURRENCY} candidatos em paralelo.`);
   console.log(`Promovidos nesta execução: ${eligible.length}. Máximo por execução: ${MAX_PROMOTE}.`);
   console.log('HTTP/HTTPS permanecem candidatos: uma resposta HTTP simples não comprova um announce BitTorrent válido.');
 }
