@@ -4,3 +4,4 @@ data/history.json
 *.log
 .DS_Store
 data/ddns-last-ip.json
+data/discovered-trackers.json
