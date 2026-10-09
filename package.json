@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "check": "node --check src/server.js",
-    "test": "npm run check"
+    "test": "npm run check && node --test"
   },
   "keywords": [
     "bittorrent",
