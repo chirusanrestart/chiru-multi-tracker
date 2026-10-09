@@ -15,6 +15,10 @@ function bencode(value) {
   if (typeof value === 'string') return bencode(Buffer.from(value));
   if (typeof value === 'number' && Number.isSafeInteger(value)) return Buffer.from('i' + value + 'e');
   if (Array.isArray(value)) return Buffer.concat([Buffer.from('l'), ...value.map(bencode), Buffer.from('e')]);
+  if (value instanceof Map) {
+    const entries = [...value.entries()].map(([key, item]) => [Buffer.isBuffer(key) ? key : Buffer.from(String(key)), item]).sort(([a], [b]) => Buffer.compare(a, b));
+    return Buffer.concat([Buffer.from('d'), ...entries.flatMap(([key, item]) => [bencode(key), bencode(item)]), Buffer.from('e')]);
+  }
   if (value && typeof value === 'object') {
     const entries = Object.entries(value).sort(([a], [b]) => Buffer.compare(Buffer.from(a), Buffer.from(b)));
     return Buffer.concat([Buffer.from('d'), ...entries.flatMap(([key, item]) => [bencode(key), bencode(item)]), Buffer.from('e')]);
@@ -151,17 +155,17 @@ export function handleTrackerRequest(req, res) {
       sendBencoded(res, 400, { 'failure reason': 'scrape requires a 20-byte info_hash' });
       return true;
     }
-    const files = {};
+    const files = new Map();
     for (const hash of hashes) {
       const key = hash.toString('hex');
       const swarm = swarms.get(key);
       if (swarm) prune(swarm, now);
       const peers = swarm ? [...swarm.peers.values()] : [];
-      files[hash.toString('latin1')] = {
+      files.set(hash, {
         complete: peers.filter(peer => peer.left === 0).length,
         downloaded: swarm?.completed || 0,
         incomplete: peers.filter(peer => peer.left > 0).length
-      };
+      });
     }
     sendBencoded(res, 200, { files });
     return true;
@@ -191,7 +195,7 @@ export function handleTrackerRequest(req, res) {
   if (event === 'stopped') {
     swarm.peers.delete(peerKey);
   } else {
-    const peerIp = cleanIp(textParam(params, 'ip')) || ip;
+    const peerIp = ip;
     if (net.isIP(peerIp)) {
       swarm.peers.set(peerKey, { id: peerKey, ip: peerIp, port, uploaded, downloaded, left, seen: now });
       if (swarm.peers.size > MAX_PEERS_PER_SWARM) {
