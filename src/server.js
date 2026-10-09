@@ -530,7 +530,10 @@ function runTrackerDiscovery() {
     discoveryProcess = null;
   });
   discoveryProcess.on('exit', (code, signal) => {
-    if (code === 0) {\n      console.log('✅ Descoberta automática concluída; candidatos atualizados em data/discovered-trackers.json.');\n      runCandidateEvaluation();\n    }
+    if (code === 0) {
+      console.log('✅ Descoberta automática concluída; candidatos atualizados em data/discovered-trackers.json.');
+      runCandidateEvaluation();
+    }
     else console.error(`⚠️ Descoberta de trackers terminou (código=${code}, sinal=${signal || 'nenhum'}).`);
     discoveryProcess = null;
   });
