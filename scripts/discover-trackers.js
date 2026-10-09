@@ -15,14 +15,21 @@ const SOURCES = [
 const TIMEOUT_MS = 10000;
 
 function normalizeTracker(value) {
+  if (typeof value !== 'string') return null;
+  const input = value.trim();
+  // Rejeita entradas malformadas como "udp://http//host" antes de URL() aceitar um hostname enganoso.
+  if (!input || /^(udp|https?):\/\/https?\/\//i.test(input)) return null;
   try {
-    const url = new URL(value.trim());
+    const url = new URL(input);
     if (!['udp:', 'http:', 'https:'].includes(url.protocol)) return null;
     if (!url.hostname || url.username || url.password) return null;
+    if (url.hostname.includes('/') || /\s/.test(url.hostname)) return null;
+    // Caminhos repetidos não acrescentam informação e criam duplicatas difíceis de comparar.
+    url.pathname = url.pathname.replace(/\/{2,}/g, '/');
     if (!url.pathname || url.pathname === '/') url.pathname = '/announce';
     url.hash = '';
     url.search = '';
-    return url.toString().replace(/\/$/, url.pathname === '/' ? '' : '/');
+    return url.toString().replace(/\/$/, '');
   } catch {
     return null;
   }
@@ -73,14 +80,26 @@ async function main() {
     }
   }
 
+  const sourceRank = new Map(SOURCES.map((source, index) => [source, index]));
   const candidates = [...found.entries()]
-    .map(([url, sources]) => ({ url, sources: [...sources] }))
-    .sort((a, b) => a.url.localeCompare(b.url));
+    .map(([url, sources]) => ({
+      url,
+      sources: [...sources],
+      // Menor índice = fonte preferida. Listas "best" vêm antes das listas gerais/comunitárias.
+      sourcePriority: Math.min(...[...sources].map(source => sourceRank.get(source) ?? 999)),
+      sourceCount: sources.size
+    }))
+    .sort((a, b) =>
+      a.sourcePriority - b.sourcePriority
+      || b.sourceCount - a.sourceCount
+      || a.url.localeCompare(b.url)
+    )
+    .map(({ sourcePriority, sourceCount, ...candidate }) => candidate);
   const output = {
     generatedAt: new Date().toISOString(),
     activeCount: active.size,
     candidateCount: candidates.length,
-    note: 'Candidatos descobertos em listas públicas; ainda não validados por announce real. Revise e teste antes de adicionar a data/trackers.json.',
+    note: 'Candidatos ordenados por qualidade presumida da fonte; ainda não validados por announce real. Revise e teste antes de adicionar a data/trackers.json.',
     sources: sourceStats,
     candidates
   };
