@@ -395,7 +395,7 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  if (pathname === '/api/history/summary') {
+  if (pathname === '/api/history/summary' || pathname === '/api/ranking') {
     const storedHistory = await readJSON(HISTORY_FILE, []);
     const history = Array.isArray(storedHistory) ? storedHistory : [];
     const summary = new Map();
