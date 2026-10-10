@@ -579,8 +579,8 @@ server.on('error', error => {
   process.exitCode = 1;
 });
 
-// Ask Node to keep IPv4-mapped connections enabled when listening on IPv6.
-server.listen({ port: PORT, host: BIND_HOST, ipv6Only: false }, async () => {
+// Bind somente em IPv6. Não aceitar sockets IPv4 nem IPv4-mapped.
+server.listen({ port: PORT, host: BIND_HOST, ipv6Only: true }, async () => {
   const address = server.address();
   startDdnsUpdater();
   startTrackerDiscoveryScheduler();
