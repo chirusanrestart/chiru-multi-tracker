@@ -16,9 +16,9 @@ const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
 const PUBLIC_FILE = path.resolve(__dirname, '../public/index.html');
 const APP_VERSION = '2.2.1';
 
-const PORT = Number(process.env.PORT || 6969);
+const PORT = Number(process.env.PORT || 38147);
 const BIND_HOST = process.env.BIND_HOST || '::';
-const PUBLIC_TRACKER_URL = (process.env.PUBLIC_TRACKER_URL || 'http://chirusanrestart.freeddns.org:6969/announce').trim();
+const PUBLIC_TRACKER_URL = (process.env.PUBLIC_TRACKER_URL || 'http://chirusanrestart.freeddns.org:38147/announce').trim();
 const INTERVAL = 5 * 60 * 1000;
 const TIMEOUT = 6000;
 const HISTORY_LIMIT = 288; // 24 horas, verificando a cada 5 min
