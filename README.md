@@ -20,7 +20,7 @@ npm start
 Por padrão, o servidor escuta na porta `6969`. Para escolher outra porta:
 
 ```sh
-PORT=6969 npm start
+PORT=8090 npm start
 ```
 
 O histórico é salvo em `data/history.json`, criado automaticamente e ignorado pelo Git. As verificações são repetidas a cada cinco minutos; no máximo cinco trackers são verificados em paralelo.
