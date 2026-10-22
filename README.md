@@ -1,4 +1,76 @@
-# Chiru MultiTracker
+# Chiru MultiTracker 🌐
+
+Agregador e monitor de trackers BitTorrent desenvolvido em Node.js, com painel web, API HTTP, geração de links magnet, descoberta automática de trackers públicos, verificações de disponibilidade e suporte a IPv4/IPv6. O projeto também inclui um tracker HTTP próprio e atualização automática de IPv6 pelo Dynu.
+
+## ✨ Principais recursos
+
+- 📊 Painel web para consultar os trackers e seus estados
+- 🔎 Verificação de endpoints UDP, HTTP e HTTPS
+- 🧲 Geração de links magnet com múltiplos trackers
+- 🛰️ Tracker HTTP próprio com endpoints `/announce` e `/scrape`
+- 🌐 Suporte a peers IPv4 e IPv6
+- 🔄 Descoberta periódica de novos trackers públicos
+- 🧪 Testes automatizados e scripts de avaliação
+- 🔁 Atualização automática de IPv6/Dynu, configurável
+
+## 📋 Requisitos
+
+- Node.js 18 ou superior
+- npm
+- Conectividade de rede com os endpoints que deseja verificar
+
+## 🚀 Instalação no Termux
+
+```sh
+pkg install nodejs
+git clone https://github.com/chirusanrestart/chiru-multi-tracker.git
+cd chiru-multi-tracker
+npm install
+npm test
+npm start
+```
+
+O servidor usa a porta `38147` por padrão. Para alterar a porta:
+
+```sh
+PORT=8090 npm start
+```
+
+## ⚙️ Configuração
+
+Consulte `.env.example` para ver as variáveis disponíveis. Se for usar a atualização automática do Dynu, copie o modelo para um arquivo local e preencha as credenciais nele:
+
+```sh
+cp .env.example .env
+nano .env
+```
+
+**Nunca publique credenciais reais.** O arquivo `.env` deve permanecer local e fora do controle de versão.
+
+Para configurar o endereço público usado nos links magnet, defina `PUBLIC_TRACKER_URL` ao iniciar o servidor. Exemplo ilustrativo:
+
+```sh
+PUBLIC_TRACKER_URL='http://seu-dominio:38147/announce' npm start
+```
+
+A conectividade externa depende do roteador, das regras de entrada, do provedor e da disponibilidade de IPv4/IPv6. Um registro DNS, sozinho, não garante que o serviço possa ser acessado de fora da rede.
+
+## 🧪 Testes e ferramentas
+
+```sh
+npm test
+npm run discover
+npm run evaluate
+npm run ddns
+```
+
+Os comandos de descoberta, avaliação e atualização Dynu têm efeitos diferentes; consulte as seções abaixo e a configuração do projeto antes de executá-los.
+
+## 🔐 Uso responsável
+
+Use somente endpoints públicos e respeite as regras dos serviços e a legislação aplicável. Os estados de disponibilidade são medições pontuais: um tracker marcado como acessível não garante que um torrent específico tenha peers ou fontes disponíveis.
+
+---
 
 Agregador e monitor de trackers BitTorrent em Node.js, com dashboard web, gerador de magnet links, verificação de endpoints, histórico local e API HTTP.
 
